@@ -1,0 +1,4 @@
+C:\Users\Andy\Programming\PurityEngine\bin\Release\net6.0\win-x64\publish\PurityEngine.pdb
+C:\Users\Andy\Programming\PurityEngine\bin\Release\net6.0\win-x64\publish\SDL2.dll
+C:\Users\Andy\Programming\PurityEngine\bin\Release\net6.0\win-x64\publish\soft_oal.dll
+C:\Users\Andy\Programming\PurityEngine\bin\Release\net6.0\win-x64\publish\PurityEngine.exe
