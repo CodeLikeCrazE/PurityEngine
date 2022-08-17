@@ -11,7 +11,7 @@ namespace PurityEditor {
 
         public void InitUI() {
             Application.Init();
-            window = new Window("Purity");
+            window = new Window("Purity Editor");
             window.SetDefaultSize(800, 600);
 
             AssetEditor editor = new AssetEditor();

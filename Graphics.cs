@@ -11,6 +11,10 @@ namespace PurityEngine.Graphics {
         public static GraphicsSystem GetOpenGL() {
             return new GLGraphicsSystem();
         }
+
+        public static GraphicsSystem GetCairo() {
+            return new UnacceleratedGraphicsSystem();
+        }
     }
 
     public class MonoGameGraphicsSystem : GraphicsSystem {
@@ -23,7 +27,7 @@ namespace PurityEngine.Graphics {
     }
 
     public class GLGraphicsSystem : GraphicsSystem {
-        PurityEngine.Internal.GLStuff.GLGraphicsCore core = new PurityEngine.Internal.GLStuff.GLGraphicsCore();
+        Internal.GLStuff.GLGraphicsCore core = new PurityEngine.Internal.GLStuff.GLGraphicsCore();
         public GLGraphicsSystem() {
 
         }

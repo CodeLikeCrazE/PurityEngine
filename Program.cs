@@ -11,17 +11,25 @@ namespace PurityEngine.ProgramMain
     {
         static void Main(string[] args)
         {
-            PurityEditor.Editor editor = new PurityEditor.Editor();
-            editor.Main(args);
-            return;
+            bool EditorMode = false;
+
+            if (args.Contains("--editor")) {
+                EditorMode = true;
+            }
+
+            if (EditorMode) {
+                PurityEditor.Editor editor = new PurityEditor.Editor();
+                editor.Main(args);
+                return;
+            }
             
             if (args.Contains("--test")) {
-                UnitTest.InitializeUnitTests();
                 UnitTest.Run();
                 return;
             }
 
-            Graphics.Graphics.GetOpenGL();
+            //Graphics.Graphics.GetOpenGL();
+            Graphics.Graphics.GetCairo();
 
             new Universe(); // Initialize universe. Ignore info, it does do something, it assigns the instance.
 
@@ -30,12 +38,17 @@ namespace PurityEngine.ProgramMain
             while (true) {
                 Universe.instance.Update();
                 Thread.Sleep(1);
+                Console.WriteLine(Serializer.Serialize(Universe.instance));
             }
         }
     }
 
     class TestComponent : Component {
+        double time = 0;
+
         public void Update() {
+            time += Time.deltaTime;
+            Console.WriteLine(time);
         }
     }
 }

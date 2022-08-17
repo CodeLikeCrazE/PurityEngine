@@ -7,7 +7,7 @@ namespace PurityEngine {
     /// <summary>
     ///  The class that represents the universe.
     /// </summary>
-    public class Universe {
+    public class Universe : Asset {
         /// <summary>
         ///  The instance of the universe.
         /// </summary>
@@ -20,6 +20,11 @@ namespace PurityEngine {
             instance = this;
         }
         /// <summary>
+        ///  Finds an object with a component
+        /// <summary>
+        public T Get<T>() {
+            return root.Get<T>();
+        }
         ///  Updates the universe.
         /// </summary>
         public void Update() {
@@ -32,7 +37,7 @@ namespace PurityEngine {
     /// <summary>
     /// The class for anything in the game
     /// </summary>
-    public class Node {
+    public class Node : Asset {
         /// <summary>
         /// The node's transform
         /// </summary>
@@ -49,6 +54,10 @@ namespace PurityEngine {
         /// The node's parent node
         /// </summary>
         public Node parent;
+        /// <summary>
+        /// The universe that owns this node
+        /// </summary>
+        public Universe universe;
         private bool initialized;
 
         public Node() {
@@ -60,9 +69,10 @@ namespace PurityEngine {
         /// </summary>
         public void Start() {
             for (int i = 0; i < components.Length; i++) {
-                if (components[i].GetType().GetMethod("Start") != null) {
-                    components[i].GetType().GetMethod("Start").Invoke(components[i],null);
-                }
+                try {
+                    components[i].node = this;
+                    ((dynamic)components[i]).Start();
+                } catch {}
             }
         }
 
@@ -76,12 +86,12 @@ namespace PurityEngine {
             }
             for (int i = 0; i < components.Length; i++) {
                 components[i].node = this;
-                components[i].transform = transform;
-                if (components[i].GetType().GetMethod("Update") != null) {
-                    components[i].GetType().GetMethod("Update").Invoke(components[i],null);
-                }
+                try {
+                    ((dynamic)components[i]).Update();
+                } catch {}
             }
             for (int i = 0; i < children.Length; i++) {
+                children[i].universe = universe;
                 children[i].Update();
             }
         }
@@ -104,13 +114,18 @@ namespace PurityEngine {
         /// <summary>
         /// Gets a component of a specific type
         /// </summary>
-        public Component? GetComponent<T>() {
+        public T Get<T>() {
             for (int i = 0; i < components.Length; i++) {
                 if (components[i] is T) {
-                    return components[i];
+                    return (T)(dynamic)components[i];
                 }
             }
-            return null;
+            for (int i = 0; i < children.Length; i++) {
+                if (children[i].Get<T>() != null) {
+                    return children[i].Get<T>();
+                }
+            }
+            return default(T);
         }
     }
 
@@ -131,12 +146,11 @@ namespace PurityEngine {
         /// <summary>
         /// The amount of time since the last frame in seconds
         /// </summary>
-
         public static double deltaTime;
-        static double previousTime;
+        private static double previousTime;
 
         public static void TimeIteration() {
-            double t = System.DateTime.UtcNow.Subtract(System.DateTime.UnixEpoch).TotalSeconds;
+            double t = DateTime.UtcNow.Subtract(System.DateTime.UnixEpoch).TotalSeconds;
             if (previousTime == 0) {
                 previousTime = t;
             }
@@ -146,39 +160,85 @@ namespace PurityEngine {
         }
     }
     
+    /// <summary>
+    /// The base of all functionality for Nodes
+    /// </summary>
     public class Component {
+        /// <summary>
+        /// The node attached to this component
+        /// </summary>
         public Node node;
-        public Transform transform;
-
+        /// <summary>
+        /// The transform attached to the node
+        /// </summary>
+        public Transform transform {
+            get {
+                return node.transform;
+            }
+        }
+        /// <summary>
+        /// The universe the node lives in
+        /// </summary>
+        public Universe universe {
+            get {
+                return node.universe;
+            }
+        }
+        
         public Component() {
         }
 
-        public Component? GetComponent<T>() {
-            return node.GetComponent<T>();
+        /// <summary>
+        /// Gets a component of a specific type
+        /// </summary>
+        public T Get<T>() {
+            return node.Get<T>();
         }
     }
 
+    /// <summary>
+    /// The class for colors
+    /// </summary>
     public class Color {
+        /// <summary>
+        /// The red component of a color
+        /// </summary>
         public double r;
+        /// <summary>
+        /// The green component of a color
+        /// </summary>
         public double g;
+        /// <summary>
+        /// The blue component of a color
+        /// </summary>
         public double b;
 
-        public Color() {
-
+        public Color(double r, double g, double b) {
+            this.r = r;
+            this.g = g;
+            this.b = b;
         }
     }
 
+    /// <summary>
+    /// The class for images
+    /// </summary>
     public class Image : Asset, Texture {
+        /// <summary>
+        /// The array of colors
+        /// </summary>
         public Color[,] colors;
+        /// <summary>
+        /// The width of the image
+        /// </summary>
         public int width;
+        /// <summary>
+        /// The height of the image
+        /// </summary>
         public int height;
 
         public Image() {
 
-        }
-
-        public bool IsReadOnly() {
-            return true;
         }
 
         public float WidthToHeightRatio() {
@@ -188,22 +248,37 @@ namespace PurityEngine {
         public Color GetColorAtCoordinate(double x, double y) {
             return colors[(int)x, (int)y];
         }
-
-        public void SetColor(double x, double y, Color color) {
-            throw new System.Security.SecurityException("Cannot set colors on an image");
-        }
     }
 
+    /// <summary>
+    /// The interface for images with dynamic resolutions
+    /// </summary>
     public interface Texture {
-        public bool IsReadOnly();
+        /// <summary>
+        /// The width relative to the height
+        /// </summary>
         public float WidthToHeightRatio();
+        /// <summary>
+        /// Gets the color at a coordinate
+        /// </summary>
         public Color GetColorAtCoordinate(double x, double y);
-        public void SetColor(double x, double y, Color c);
     }
 
+    /// <summary>
+    /// The class for the position of a component in the world
+    /// </summary>
     public class Transform {
+        /// <summary>
+        /// The position of the object
+        /// </summary>
         public Vector3D position;
+        /// <summary>
+        /// The rotation of the object
+        /// </summary>
         public Vector3D rotation;
+        /// <summary>
+        /// The scale of the object
+        /// </summary>
         public Vector3D scale;
 
         public Transform() {
@@ -211,6 +286,9 @@ namespace PurityEngine {
         }
     }
 
+    /// <summary>
+    /// A 2D position
+    /// </summary>
     public class Vector2D {
         public double x;
         public double y;
@@ -231,8 +309,34 @@ namespace PurityEngine {
         public static implicit operator Vector4D(Vector2D value) {
             return new Vector4D(value.x,value.y,0,0);
         }
+
+        public static Vector2D operator +(Vector2D a, Vector2D b)
+        {
+            return new Vector2D(a.x + b.x, a.y + b.y);
+        }
+        public static Vector2D operator -(Vector2D a, Vector2D b)
+        {
+            return new Vector2D(a.x - b.x, a.y - b.y);
+        }
+        public static Vector2D operator *(Vector2D a, Vector2D b)
+        {
+            return new Vector2D(a.x * b.x, a.y * b.y);
+        }
+        public static Vector2D operator /(Vector2D a, Vector2D b)
+        {
+            return new Vector2D(a.x / b.x, a.y / b.y);
+        }
+        public static Vector2D operator *(Vector2D a, double b) {
+            return new Vector2D(a.x * b, a.y * b);
+        }
+        public static Vector2D operator /(Vector2D a, double b) {
+            return new Vector2D(a.x / b, a.y / b);
+        }
     }
 
+    /// <summary>
+    /// A 3D position
+    /// </summary>
     public class Vector3D {
         public double x;
         public double y;
@@ -255,8 +359,34 @@ namespace PurityEngine {
             this.y = y;
             this.z = z;
         }
+
+        public static Vector3D operator +(Vector3D a, Vector3D b)
+        {
+            return new Vector3D(a.x + b.x, a.y + b.y, a.z + b.z);
+        }
+        public static Vector3D operator -(Vector3D a, Vector3D b)
+        {
+            return new Vector3D(a.x - b.x, a.y - b.y, a.z - b.z);
+        }
+        public static Vector3D operator *(Vector3D a, Vector3D b)
+        {
+            return new Vector3D(a.x * b.x, a.y * b.y, a.z * b.z);
+        }
+        public static Vector3D operator /(Vector3D a, Vector3D b)
+        {
+            return new Vector3D(a.x / b.x, a.y / b.y, a.z / b.z);
+        }
+        public static Vector3D operator *(Vector3D a, double b) {
+            return new Vector3D(a.x * b, a.y * b, a.z * b);
+        }
+        public static Vector3D operator /(Vector3D a, double b) {
+            return new Vector3D(a.x / b, a.y / b, a.z * b);
+        }
     }
 
+    /// <summary>
+    /// A 4D position
+    /// </summary>
     public class Vector4D {
         public double x;
         public double y;
@@ -280,6 +410,29 @@ namespace PurityEngine {
             this.y = y;
             this.z = z;
             this.w = w;
+        }
+
+        public static Vector4D operator +(Vector4D a, Vector4D b)
+        {
+            return new Vector4D(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
+        }
+        public static Vector4D operator -(Vector4D a, Vector4D b)
+        {
+            return new Vector4D(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w);
+        }
+        public static Vector4D operator *(Vector4D a, Vector4D b)
+        {
+            return new Vector4D(a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w);
+        }
+        public static Vector4D operator /(Vector4D a, Vector4D b)
+        {
+            return new Vector4D(a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w);
+        }
+        public static Vector4D operator *(Vector4D a, double b) {
+            return new Vector4D(a.x * b, a.y * b, a.z * b, a.w * b);
+        }
+        public static Vector4D operator /(Vector4D a, double b) {
+            return new Vector4D(a.x / b, a.y / b, a.z / b, a.w / b);
         }
     }
 }

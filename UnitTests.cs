@@ -23,13 +23,14 @@ namespace PurityEngine.UnitTests {
         public string expectedOutput;
         public string id;
 
-        public UnitTest(UnitTestBody body, dynamic output) {
+        public UnitTest(string id, UnitTestBody body, dynamic output) {
             task = body;
             expectedOutput = output;
+            this.id = id;
         }
 
         public static void InitializeUnitTests() {
-            Register(new UnitTest(CompilerTest1,"if (noop) {noop}"));
+            Register(new UnitTest("ALCompilerTest",CompilerTest1,"if (noop) {noop}"));
         }
 
         public static dynamic CompilerTest1() {
@@ -48,9 +49,14 @@ namespace PurityEngine.UnitTests {
             if (output != expectedOutput) {
                 throw new UnitTestFailedException("The task \"" + task.ToString() + "\" outputted " + output.ToString() + " but expected " + expectedOutput.ToString());
             }
+            Console.BackgroundColor = ConsoleColor.Blue;
+            Console.Write("PASS");
+            Console.BackgroundColor = ConsoleColor.Black;
+            Console.WriteLine(" Test " + id + " completed.");
         }
 
         public static void Run() {
+            InitializeUnitTests();
             foreach (UnitTest test in unitTests) {
                 test._Run();
             }
